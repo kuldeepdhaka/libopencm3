@@ -215,58 +215,70 @@ uint16_t stm32_usbfs_ep_read_packet(usbd_device *dev, uint8_t addr,
 
 void stm32_usbfs_poll(usbd_device *dev)
 {
-	uint16_t istr = *USB_ISTR_REG;
+	uint16_t istr = USB_ISTR;
 
-	if (istr & USB_ISTR_RESET) {
-		USB_CLR_ISTR_RESET();
-		dev->pm_top = USBD_PM_TOP;
-		_usbd_reset(dev);
-		return;
-	}
-
-	if (istr & USB_ISTR_CTR) {
-		uint8_t ep = istr & USB_ISTR_EP_ID;
+	/* process endpoint related interrupt */
+	while(istr & USB_ISTR_CTR) {
+		uint8_t addr = istr & USB_ISTR_EP_ID;
+		uint16_t ep = USB_EP(addr);
 		uint8_t type;
 
 		if (istr & USB_ISTR_DIR) {
 			/* OUT or SETUP? */
-			if (*USB_EP_REG(ep) & USB_EP_SETUP) {
+			if (ep & USB_EP_SETUP) {
 				type = USB_TRANSACTION_SETUP;
 			} else {
 				type = USB_TRANSACTION_OUT;
 			}
+
+			ep &= ~USB_EP_RX_CTR;
 		} else {
 			type = USB_TRANSACTION_IN;
-			USB_CLR_EP_TX_CTR(ep);
+			ep &= ~USB_EP_TX_CTR;
 		}
 
-		if (dev->user_callback_ctr[ep][type]) {
-			dev->user_callback_ctr[ep][type] (dev, ep);
+		if (dev->user_callback_ctr[addr][type]) {
+			dev->user_callback_ctr[addr][type] (dev, addr);
 		}
 
-		if(istr & USB_ISTR_DIR) {
-			USB_CLR_EP_RX_CTR(ep);
-		}
+		/* reset bits that can only be changed by toggle */
+		ep &= ~(USB_EP_RX_DTOG | USB_EP_RX_STAT |
+				USB_EP_TX_DTOG | USB_EP_TX_STAT);
+
+		USB_EP(addr) = ep;
+
+		/* reload ISTR */
+		istr = USB_ISTR;
+	}
+
+	if (istr & USB_ISTR_RESET) {
+		istr &= ~USB_ISTR_RESET;
+		dev->pm_top = USBD_PM_TOP;
+		_usbd_reset(dev);
+		goto done;
 	}
 
 	if (istr & USB_ISTR_SUSP) {
-		USB_CLR_ISTR_SUSP();
+		istr &= ~USB_ISTR_SUSP;
 		if (dev->user_callback_suspend) {
 			dev->user_callback_suspend();
 		}
 	}
 
 	if (istr & USB_ISTR_WKUP) {
-		USB_CLR_ISTR_WKUP();
+		istr &= ~USB_ISTR_WKUP;
 		if (dev->user_callback_resume) {
 			dev->user_callback_resume();
 		}
 	}
 
 	if (istr & USB_ISTR_SOF) {
-		USB_CLR_ISTR_SOF();
+		istr &= ~USB_ISTR_SOF;
 		if (dev->user_callback_sof) {
 			dev->user_callback_sof();
 		}
 	}
+
+	done:
+	USB_ISTR = istr;
 }
