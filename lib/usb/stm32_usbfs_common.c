@@ -223,6 +223,15 @@ void stm32_usbfs_poll(usbd_device *dev)
 		uint16_t ep = USB_EP(addr);
 		uint8_t type;
 
+		/* if DIR is set (ie RX is set or RX+TX is set),
+		 *  then for control in transfer,
+		 *  make sure that TX is processed first before RX.
+		 *   (ie LAST_DATA_IN is processed before STATUS_OUT) */
+		if((! addr) && (ep & USB_EP_TX_CTR) &&
+			(dev->control_state.state == LAST_DATA_IN)) {
+			istr &= ~USB_ISTR_DIR;
+		}
+
 		if (istr & USB_ISTR_DIR) {
 			/* OUT or SETUP? */
 			if (ep & USB_EP_SETUP) {
@@ -230,7 +239,6 @@ void stm32_usbfs_poll(usbd_device *dev)
 			} else {
 				type = USB_TRANSACTION_OUT;
 			}
-
 			ep &= ~USB_EP_RX_CTR;
 		} else {
 			type = USB_TRANSACTION_IN;
