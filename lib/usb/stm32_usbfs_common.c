@@ -79,7 +79,7 @@ void stm32_usbfs_ep_setup(usbd_device *dev, uint8_t addr, uint8_t type,
 
 	if (dir || (addr == 0)) {
 		USB_SET_EP_TX_ADDR(addr, dev->pm_top);
-		if (callback) {
+		if (addr != 0) {
 			dev->user_callback_ctr[addr][USB_TRANSACTION_IN] =
 			    (void *)callback;
 		}
@@ -91,7 +91,7 @@ void stm32_usbfs_ep_setup(usbd_device *dev, uint8_t addr, uint8_t type,
 	if (!dir) {
 		USB_SET_EP_RX_ADDR(addr, dev->pm_top);
 		stm32_usbfs_set_ep_rx_bufsize(dev, addr, max_size);
-		if (callback) {
+		if (addr != 0) {
 			dev->user_callback_ctr[addr][USB_TRANSACTION_OUT] =
 			    (void *)callback;
 		}
