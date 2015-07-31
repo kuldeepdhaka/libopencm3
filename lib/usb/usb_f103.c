@@ -324,17 +324,30 @@ static void stm32f103_poll(usbd_device *dev)
 	}
 
 	if (istr & USB_ISTR_SUSP) {
-		USB_CLR_ISTR_SUSP();
+		/* suspend mode within the USB peripheral.
+		 * check for SOF is disable (so, no SUSPEND interrupt) */
+		*USB_CNTR_REG |= USB_CNTR_FSUSP;
+
 		if (dev->user_callback_suspend) {
 			dev->user_callback_suspend();
 		}
+
+		/* remove static power consumption in the analog USB transceivers
+		 *  but keeping them able to detect resume activity. */
+		*USB_CNTR_REG |= USB_CNTR_LP_MODE;
+
+		USB_CLR_ISTR_SUSP();
 	}
 
 	if (istr & USB_ISTR_WKUP) {
-		USB_CLR_ISTR_WKUP();
+		/* take out USB Peripherial from suspend mode */
+		*USB_CNTR_REG &= ~USB_CNTR_FSUSP;
+
 		if (dev->user_callback_resume) {
 			dev->user_callback_resume();
 		}
+
+		USB_CLR_ISTR_WKUP();
 	}
 
 	if (istr & USB_ISTR_SOF) {

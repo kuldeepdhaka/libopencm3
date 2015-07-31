@@ -307,16 +307,26 @@ void stm32fx07_poll(usbd_device *usbd_dev)
 	}
 
 	if (intsts & OTG_FS_GINTSTS_USBSUSP) {
+		/* Stop the PHY clock.
+		 *  we can still detect RESUME on bus */
+		REBASE(OTG_PCGCCTL) = OTG_FS_PCGCCTL_GATEHCLK |
+			OTG_FS_PCGCCTL_STPPCLK;
+
 		if (usbd_dev->user_callback_suspend) {
 			usbd_dev->user_callback_suspend();
 		}
+
 		REBASE(OTG_GINTSTS) = OTG_FS_GINTSTS_USBSUSP;
 	}
 
 	if (intsts & OTG_FS_GINTSTS_WKUPINT) {
+		/* Restart the PHY clock. */
+		REBASE(OTG_PCGCCTL) = 0;
+
 		if (usbd_dev->user_callback_resume) {
 			usbd_dev->user_callback_resume();
 		}
+
 		REBASE(OTG_GINTSTS) = OTG_FS_GINTSTS_WKUPINT;
 	}
 

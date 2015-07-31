@@ -617,6 +617,10 @@ static usbd_device *lm4f_usbd_init(void)
 	/* Now connect to USB */
 	lm4f_usb_soft_connect();
 
+	/* Enable {RESET, SUSPEND, RESUME} interrupt.
+	 * These are required for working of the library internally */
+	USB_IE |= USB_IM_RESET | USB_IM_SUSPEND | USB_IM_RESUME;
+
 	/* No FIFO allocated yet, but the first 64 bytes are still reserved */
 	usbd_dev.fifo_mem_top = 64;
 

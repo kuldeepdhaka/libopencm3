@@ -347,4 +347,9 @@
 /* Bits 18:7 - Reserved */
 #define OTG_FS_DIEPSIZ0_XFRSIZ_MASK	(0x7f << 0)
 
+/* OTG_FS power and clock gating control register (OTG_FS_PCGCCTL) */
+#define OTG_FS_PCGCCTL_PHYSUSP		(1 << 4)
+#define OTG_FS_PCGCCTL_GATEHCLK		(1 << 1)
+#define OTG_FS_PCGCCTL_STPPCLK		(1 << 0)
+
 #endif
